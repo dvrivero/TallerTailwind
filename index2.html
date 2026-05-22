@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tablero de Tareas</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-100 min-h-screen p-4 md:p-8">
+    <div class="max-w-4xl mx-auto">
+      <div class="bg-white rounded-lg shadow-md p-4 md:p-8">
+        <h1 class="text-3xl font-bold text-slate-900 mb-2">
+          Tablero de Tareas
+        </h1>
+
+        <p class="text-slate-600 mb-6">
+          Gestión de tareas usando JSONPlaceholder (GET, POST, PUT y DELETE).
+        </p>
+
+        <form id="taskForm" class="flex flex-col md:flex-row gap-3 mb-6">
+          <input
+            id="taskInput"
+            type="text"
+            placeholder="Escribe una nueva tarea..."
+            class="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+
+          <button
+            type="submit"
+            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            Agregar
+          </button>
+        </form>
+
+        <div id="taskList" class="grid gap-4"></div>
+      </div>
+    </div>
+
+    <script>
+      const API_URL = "https://jsonplaceholder.typicode.com/posts";
+
+      let tareas = [];
+
+      async function cargarTareas() {
+        try {
+          const respuesta = await fetch(`${API_URL}?_limit=8`);
+
+          tareas = await respuesta.json();
+
+          renderizarTareas();
+        } catch (error) {
+          console.error("Error al cargar tareas:", error);
+        }
+      }
+
+      function renderizarTareas() {
+        const lista = document.getElementById("taskList");
+
+        lista.innerHTML = "";
+
+        tareas.forEach((tarea) => {
+          const tarjeta = document.createElement("div");
+
+          tarjeta.className =
+            "bg-slate-50 border border-slate-200 rounded-lg p-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4";
+
+          tarjeta.innerHTML = `
+    <div class="flex-1">
+        <h3 class="font-semibold text-slate-800 mb-2 text-lg">
+            ${tarea.title}
+        </h3>
+
+        <p class="text-slate-600">
+            ${tarea.body}
+        </p>
+    </div>
+
+    <div>
+        <button
+            onclick="eliminarTarea(${tarea.id})"
+            class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+        >
+            Eliminar
+        </button>
+    </div>
+                `;
+
+          lista.appendChild(tarjeta);
+        });
+      }
+
+      document
+        .getElementById("taskForm")
+        .addEventListener("submit", agregarTarea);
+
+      async function agregarTarea(e) {
+        e.preventDefault();
+
+        const input = document.getElementById("taskInput");
+
+        if (!input.value.trim()) return;
+
+        const nuevaTarea = {
+          title: input.value,
+          completed: false,
+          userId: 1,
+        };
+
+        try {
+          const respuesta = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(nuevaTarea),
+          });
+
+          const tareaCreada = await respuesta.json();
+
+          tareas.unshift({
+            ...tareaCreada,
+            id: Date.now(),
+          });
+
+          renderizarTareas();
+
+          input.value = "";
+        } catch (error) {
+          console.error("Error al agregar tarea:", error);
+        }
+      }
+
+      async function cambiarEstado(id) {
+        const tarea = tareas.find((t) => t.id === id);
+
+        if (!tarea) return;
+
+        try {
+          await fetch(`${API_URL}/${id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              ...tarea,
+              completed: !tarea.completed,
+            }),
+          });
+
+          tarea.completed = !tarea.completed;
+
+          renderizarTareas();
+        } catch (error) {
+          console.error("Error al actualizar tarea:", error);
+        }
+      }
+
+      async function eliminarTarea(id) {
+        try {
+          await fetch(`${API_URL}/${id}`, {
+            method: "DELETE",
+          });
+
+          tareas = tareas.filter((t) => t.id !== id);
+
+          renderizarTareas();
+        } catch (error) {
+          console.error("Error al eliminar tarea:", error);
+        }
+      }
+
+      cargarTareas();
+    </script>
+  </body>
+</html>
